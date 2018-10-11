@@ -1,102 +1,48 @@
 import java.util.Scanner;
-
-/*
- * 文字列から数値を読み取るプログラム
- *   0                           -> 整数 (例: 0)
- *   [1-9][0-9]*                 -> 整数 (例: 100)
- *   0[xX][0-9a-fA-F]+           -> 整数 (例: 0xabc)
- *   [0-9]*[a-fA-F][0-9a-fA-F]*  -> 整数 (例: 0123456789a)
- *   [1-9][0-9]*\.[0-9]*         -> 小数 (例: 10.3)
- *   0\.[0-9]*                   -> 小数 (例: 0.12)
- *   \.[0-9]+                    -> 小数 (例: .12)
- */
-
+import java.util.regex.*;
 public class Lexer {
-	static class Token {
-		static final String TYPE_INT = "INT";
-		static final String TYPE_DEC = "DEC";
-		static final String TYPE_ERR = "ERR";
-		
-		Token(String tokenType, int start, int len) {
-			this.tokenType = tokenType;
-			this.start = start;
-			this.len = len;
-		}
-		
-		String tokenType;  /* トークンの種類 */
-		int start;         /* 文字列中のトークン開始位置 */
-		int len;           /* トークンの長さ */
-	}
-	
-	static final int CT_P = 0;
-	static final int CT_X = 1;
-	static final int CT_0 = 2;
-	static final int CT_1 = 3;
-	static final int CT_A = 4;
-	static final int CT_OTHER = 5;
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        String input = scanner.nextLine();
+        scanner.close();
 
-	/*
-	 * 文字を分類する
-	 *   [1-9] や [a-f] をまとめて扱えるようにするため．
-	 */
-	static int getCharType(int c) {
-		if (c == '.')             return CT_P;
-		if (c == 'x' || c == 'X') return CT_X;
-		if (c == '0')             return CT_0;
-		if ('1' <= c && c <= '9') return CT_1;
-		if ('a' <= c && c <= 'f') return CT_A;
-		if ('A' <= c && c <= 'F') return CT_A;
-		return CT_OTHER;
-	}
-	
-	int[][] delta = {
-		/* TODO */
-		/* 状態遷移表を作る */
-		/*   delta[現状態][入力記号] */
+        String output = "ERR";
+        Pattern p = Pattern.compile("^[0-9a-f]+");
+        Pattern p2 = Pattern.compile("^[0-9A-F]+");
+        Pattern p3 = Pattern.compile("^0x[0-9a-f]+");
+        Pattern p4 = Pattern.compile("0X[0-9A-F]+");
+        Pattern p5 = Pattern.compile("(0|[1-9][0-9]*)(\\.[0-9]*)");
+        Pattern p6 = Pattern.compile("^\\.[0-9]*");
+        Matcher match = p.matcher(input);
+        if(match.find()) {
+            output = "INT" + match.group(); //10進数か16進数(小文字)の1文字以上
+        }
 
-		/*  P  X  0  1  A  OTHER */
-		/*{ ?, ?, ?, ?, ?, ?}, /* 状態0 */
-		/*{ ?, ?, ?, ?, ?, ?}, /* 状態1 */
-		/*...*/
-	};
+        match = p2.matcher(input);
+        if(match.find() && match.group().length() > output.length()) {
+            output = "INT" + match.group(); //10進数か16進数(大文字)の1文字以上
+        }
 
-	/*
-	 * 文字列 str の start 文字目から字句解析しトークンを一つ返す
-	 */
-	Token getToken(String str, int start) {
-		/* 現在注目している文字 (先頭から p 文字目)  */
-		int p = start;
+        match = p3.matcher(input);
+        if(match.find()) {
+            output = "INT" + match.group(); //16進数0x開始(小文字)
+        }
 
-		/* 最後の受理状態のラベルとその時何文字目まで読んだか */
-		String acceptType = Token.TYPE_ERR;
-		int acceptPos = start;
+        match = p4.matcher(input);
+        if(match.find()) {
+            output = "INT" + match.group(); //16進数0X開始(大文字)
+        }
 
-		/* 現在の状態 */
-		int currentState = 0;
+        match = p5.matcher(input);
+        if(match.find()) {
+            output = "DEC" + match.group(); //小数点を含む場合
+        }
 
-		while (p < str.length()) {
-			int c = str.charAt(p); /* str の p 文字目を読み取る */
-			p++;
-			
-			int ct = getCharType(c);
-			int nextState = delta[currentState][ct];
+        match = p6.matcher(input);
+        if(match.find()) {
+            output = "DEC" + match.group(); //整数自由
+        }
 
-			/* TODO */
-			/* 行先がなければループを抜ける */
-			/* 行先が受理状態であれば「最後の受理状態」を更新する */
-
-			currentState = nextState;
-		}
-		
-		return new Token(acceptType, start, acceptPos - start);
-	}
-	
-	public static void main(String[] args) {
-		Scanner sc = new Scanner(System.in);
-		String str = sc.nextLine();  /* 1行読み取る */
-		Lexer lex = new Lexer();
-		Token t = lex.getToken(str, 0);
-		System.out.print(t.tokenType);
-		System.out.println(str.substring(t.start, t.start + t.len));
-	}
+        System.out.println(output);
+    }
 }
